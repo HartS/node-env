@@ -7,6 +7,42 @@ var http = require("http"),
     sysinfo = require('./lib/sysinfo'),
     port = process.env.PORT || 8888;
 
+var errCount = 0;
+var proxyHost, proxyPort;
+
+if (process.env['http_proxy']) {
+  proxyHost = url.parse(process.env['http_proxy']).hostname 
+  proxyPort = url.parse(process.env['http_proxy']).port
+}
+
+var exampleHost = 'example.com'
+var requestOptions = {
+  host: proxyHost || exampleHost,
+  port: proxyPort || 80,
+  path: process.env['http_proxy'] ? exampleHost : '',
+  headers: process.env['http_proxy'] ? {Host: exampleHost} : {}
+}
+
+function checkExample(){
+  var req = http.get(requestOptions, function(response){
+    errCount = 0;
+    setTimeout(checkExample, 1000)
+  }).on('error', function(err) {
+    console.log('An error occurred');
+    errCount += 1;
+    if (errCount == 3) process.exit(1);
+    setTimeout(checkExample, 1000)
+  }).on('timeout', function(err) {
+    console.log('A timeout occurred');
+    errCount += 1;
+    if (errCount == 3) process.exit(1);
+    setTimeout(checkExample, 1000)
+  });
+  req.setTimeout(1000);
+}
+
+checkExample();
+
 http.createServer(function(request, response) {
 
     var uri = url.parse(request.url).pathname,
